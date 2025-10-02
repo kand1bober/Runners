@@ -5,6 +5,7 @@
 #include <sys/wait.h>
 #include <errno.h>
 #include <sys/ipc.h>
+#include <sys/time.h>
 
 // #define RUNNER_MSG_TYPE 7
 #define MSG_SIZE 100
@@ -82,10 +83,11 @@ int main(int argc, char* argv[])
 
 void judge(int runners_num, int qid)
 {
-    printf("I am judge, waiting for runners...\n");
+    //Introduce
+    printf("Judge:     I wait for runners...\n");
 
+    //Greet runners
     struct msgbuf msg;
-
     int runners_count = 0;
     while (runners_count < runners_num)
     {
@@ -95,22 +97,62 @@ void judge(int runners_num, int qid)
         }
         else 
         {
-            printf("Judge: I met runner #%s \n", msg.mtext);
+            printf("Judge:     I met runner #%s \n", msg.mtext);
             runners_count += 1;
         }
     }
+
+    //Give command to first runner
+    printf("Judge:     Command to runner #1: run!\n");
+    send_msg(qid, 1, NULL);
+
+    //begin counting time
+    struct timeval tv1 = {};
+    gettimeofday(&tv1, NULL);   
+
+    //Receive command from last runner(last runner sends msg with type == runners_num + 1)
+    while (get_msg(qid, runners_num + 1, &msg) == -1){
+        continue;
+    }
+
+    //calculate time 
+    struct timeval tv2 = {};
+    gettimeofday(&tv2, NULL);
+
+    long int time_sec = (long int)(tv2.tv_sec - tv1.tv_sec);
+    long int time_usec = ((tv2.tv_usec - tv1.tv_usec));
+    if (tv2.tv_usec < tv1.tv_usec)
+    {
+        time_sec -= 1;
+        time_usec += 10e6; 
+    }
+
+    printf("Judge:  race finished, total time: = %ld.%ld s\n", time_sec, time_usec);
 }
 
 
 void runner(int runners_num, int self_num, int qid)
 {
-    printf("I am runnner #%d, came to stadion\n", self_num);
+    //Introduce
+    printf("Runner #%d: I am #%d, came to stadion\n", self_num, self_num);
     
-    //number of runner in text
+    //Greet the judge
     char text[MSG_SIZE];
     snprintf(text, MSG_SIZE, "%d", self_num); //send messaage with his self number
-
     send_msg(qid, self_num, text);
+
+    //Receive command from judge/prev runner
+    printf("Runner #%d: waiting for command\n", self_num);
+    struct msgbuf msg;
+    while (get_msg(qid, self_num, &msg) == -1) 
+    {
+        continue;
+    }
+    printf("Runner #%d: received command to run\n", self_num);
+
+    //Transfer queue(send message with self_number + 1)
+    printf("Runner #%d: transfering command to run to next runner\n", self_num);
+    send_msg(qid, self_num + 1, NULL);
 }
 
 
