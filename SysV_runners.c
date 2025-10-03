@@ -16,7 +16,7 @@ struct msgbuf {
 };
 
 void judge(int runners_num, int msg_id);
-void runner(int runners_num, int self_num, int msg_id);
+void runner(int self_num, int qid);
 
 int get_msg(int qid, int msg_type, struct msgbuf* msg);
 void send_msg(int qid, int msg_type, char* text);
@@ -64,7 +64,7 @@ int main(int argc, char* argv[])
         }
         else if (pid == 0) //child
         {
-            runner(runners_num, i, qid);
+            runner(i, qid);
             exit(0);
         }
     }
@@ -131,7 +131,7 @@ void judge(int runners_num, int qid)
 }
 
 
-void runner(int runners_num, int self_num, int qid)
+void runner(int self_num, int qid)
 {
     //Introduce
     printf("Runner #%d: I am #%d, came to stadion\n", self_num, self_num);
